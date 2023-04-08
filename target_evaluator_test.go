@@ -188,7 +188,7 @@ func TestTargetEvaluation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			evaluator := TargetEvaluator{test.targetingContext}
-			assert.Equal(t, test.expectedResult, evaluator.IsTargetMatch(test.settingsFile))
+			assert.Equal(t, test.expectedResult, evaluator.isTargetMatch(test.settingsFile))
 		})
 	}
 }

@@ -47,7 +47,7 @@ func mapContains(map1, map2 map[string]interface{}) bool {
 	return true
 }
 
-func (t *TargetEvaluator) IsTargetMatch(settingsFile SettingsFile) bool {
+func (t *TargetEvaluator) isTargetMatch(settingsFile SettingsFile) bool {
 	if settingsFile.Metadata.End {
 		return false
 	}

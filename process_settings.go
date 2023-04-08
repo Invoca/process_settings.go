@@ -1,3 +1,4 @@
+// Package process_settings implements dynamic settings for the process.
 package process_settings
 
 import (
@@ -10,12 +11,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// A ProcessSettings is a collection of settings files and a target evaluator
+// that can be used to get the value of a settings based on the current targeting.
 type ProcessSettings struct {
-	FilePath        string
-	Settings        *[]SettingsFile
-	TargetEvaluator TargetEvaluator
+	FilePath        string          // The path to the settings file that was used to create the ProcessSettings
+	Settings        *[]SettingsFile // The settings files that make up the ProcessSettings
+	TargetEvaluator TargetEvaluator // The target evaluator that is used to determine which settings files are applicable
 }
 
+// NewProcessSettingsFromFile creates a new instance of ProcessSettings by
+// loading the settings from a specified file path and using the specified
+// static context to evaluate the targeting.
 func NewProcessSettingsFromFile(filePath string, staticContext map[string]interface{}) (*ProcessSettings, error) {
 	settings, err := loadSettingsFromFile(filePath)
 	if err != nil {
@@ -28,6 +34,8 @@ func NewProcessSettingsFromFile(filePath string, staticContext map[string]interf
 	}, nil
 }
 
+// Get returns the value of a setting based on the current targeting.
+// If the requested setting is not found, an error is returned.
 func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) {
 	value := ps.SafeGet(settingPath...)
 
@@ -42,11 +50,13 @@ func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) 
 	return value, nil
 }
 
+// SafeGet returns the value of a setting based on the current targeting.
+// If the requested setting is not found, nil is returned.
 func (ps *ProcessSettings) SafeGet(settingPath ...interface{}) interface{} {
 	var value interface{}
 
 	for _, settingsFile := range *ps.Settings {
-		if ps.TargetEvaluator.IsTargetMatch(settingsFile) {
+		if ps.TargetEvaluator.isTargetMatch(settingsFile) {
 			if fileValue := dig(settingsFile.Settings, settingPath...); fileValue != nil {
 				value = fileValue
 			}
@@ -95,7 +105,7 @@ func loadSettingsFromFile(filePath string) (*[]SettingsFile, error) {
 	}
 
 	for i, setting := range settings {
-		valid, err := setting.IsValid()
+		valid, err := setting.isValid()
 		if !valid {
 			return nil, errors.New(fmt.Sprintf("Invalid settings file at index %d: %s => %v", i, err.Error(), setting))
 		}

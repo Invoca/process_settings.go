@@ -14,7 +14,7 @@ type SettingsFile struct {
 	Metadata SettingsMetadata       `yaml:"meta"`
 }
 
-func (s *SettingsFile) IsValid() (bool, error) {
+func (s *SettingsFile) isValid() (bool, error) {
 	if s.Metadata != (SettingsMetadata{}) {
 		if s.FileName != "" || s.Target != nil || s.Settings != nil {
 			return false, errors.New("The settings file must only have settings or metadata, not both")

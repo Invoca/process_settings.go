@@ -89,7 +89,7 @@ func TestSettingsFileValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			valid, err := test.settingsFile.IsValid()
+			valid, err := test.settingsFile.isValid()
 			assert.Equal(t, test.expectedValid, valid)
 			if !valid {
 				assert.Error(t, err)
