@@ -64,3 +64,188 @@ func TestNewProcessSettingsFromFile(t *testing.T) {
 		assert.Equal(t, "+12755554321", (*settings.Settings)[3].Target["caller_id"].([]interface{})[1])
 	})
 }
+
+var (
+	honeypotWithoutLogStream = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"answer_odds": 100,
+				},
+			},
+		},
+	}
+	honeypotWithLogStream = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"answer_odds": 100,
+					"log_stream":  "sip",
+				},
+			},
+		},
+	}
+	honeypotWithTarget = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Target: map[string]interface{}{
+				"app": "telecom",
+			},
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"answer_odds": 100,
+					"log_stream":  "sip",
+				},
+			},
+		},
+	}
+	honeypotWithTargetedOverride = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"log_stream": "original",
+				},
+			},
+		},
+		{
+			FileName: "honeypot_override.yml",
+			Target: map[string]interface{}{
+				"app": "telecom",
+			},
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"answer_odds": 100,
+					"log_stream":  "override",
+				},
+			},
+		},
+	}
+	honeypotWithSettingsArray = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"certs": []interface{}{
+						map[string]interface{}{
+							"path": "original_0",
+						},
+						map[string]interface{}{
+							"path": "original_1",
+						},
+					},
+				},
+			},
+		},
+	}
+)
+
+var getAndSafeGetTests = []struct {
+	name            string
+	processSettings ProcessSettings
+	settingPath     []interface{}
+	expectedError   string
+	expectedValue   interface{}
+}{
+	{
+		name: "Returns an error when the setting is not found",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithoutLogStream,
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedError: "The setting 'honeypot.log_stream' was not found",
+	},
+	{
+		name: "Returns the value when the setting is found",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithLogStream,
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedValue: "sip",
+	},
+	{
+		name: "Does not find the setting when the targeting does not match",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithTarget,
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedError: "The setting 'honeypot.log_stream' was not found",
+	},
+	{
+		name: "Finds the setting when the targeting does not match",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithTarget,
+			TargetEvaluator: TargetEvaluator{
+				targetingContext: map[string]interface{}{
+					"app": "telecom",
+				},
+			},
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedValue: "sip",
+	},
+	{
+		name: "Ignores overridden settings when the targeting does not match",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithTargetedOverride,
+			TargetEvaluator: TargetEvaluator{
+				targetingContext: map[string]interface{}{
+					"app": "not telecom",
+				},
+			},
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedValue: "original",
+	},
+	{
+		name: "Returns the overridden settings when the targeting matches",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithTargetedOverride,
+			TargetEvaluator: TargetEvaluator{
+				targetingContext: map[string]interface{}{
+					"app": "telecom",
+				},
+			},
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream"},
+		expectedValue: "override",
+	},
+	{
+		name: "Returns the values nested under arrays",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithSettingsArray,
+		},
+		settingPath:   []interface{}{"honeypot", "certs", 1, "path"},
+		expectedValue: "original_1",
+	},
+}
+
+func TestProcessSettings_SafeGet(t *testing.T) {
+	for _, test := range getAndSafeGetTests {
+		t.Run(test.name, func(t *testing.T) {
+			value := test.processSettings.SafeGet(test.settingPath...)
+			if test.expectedError == "" {
+				assert.Equal(t, test.expectedValue, value)
+			} else {
+				assert.Nil(t, value)
+			}
+		})
+	}
+}
+
+func TestProcessSettings_Get(t *testing.T) {
+	for _, test := range getAndSafeGetTests {
+		t.Run(test.name, func(t *testing.T) {
+			value, err := test.processSettings.Get(test.settingPath...)
+			if test.expectedError == "" {
+				assert.Nil(t, err)
+				assert.Equal(t, test.expectedValue, value)
+			} else {
+				assert.Error(t, err)
+				assert.Equal(t, test.expectedError, err.Error())
+			}
+		})
+	}
+}

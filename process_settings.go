@@ -4,14 +4,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 type ProcessSettings struct {
-	FilePath      string
-	StaticContext map[string]interface{}
-	Settings      *[]SettingsFile
+	FilePath        string
+	Settings        *[]SettingsFile
+	TargetEvaluator TargetEvaluator
 }
 
 func NewProcessSettingsFromFile(filePath string, staticContext map[string]interface{}) (*ProcessSettings, error) {
@@ -20,10 +22,69 @@ func NewProcessSettingsFromFile(filePath string, staticContext map[string]interf
 		return nil, err
 	}
 	return &ProcessSettings{
-		FilePath:      filePath,
-		StaticContext: staticContext,
-		Settings:      settings,
+		FilePath:        filePath,
+		Settings:        settings,
+		TargetEvaluator: TargetEvaluator{staticContext},
 	}, nil
+}
+
+func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) {
+	value := ps.SafeGet(settingPath...)
+
+	if value == nil {
+		stringifiedSettingPath := make([]string, len(settingPath))
+		for i := range settingPath {
+			stringifiedSettingPath[i] = fmt.Sprintf("%v", settingPath[i])
+		}
+		return nil, errors.New(fmt.Sprintf("The setting '%s' was not found", strings.Join(stringifiedSettingPath, ".")))
+	}
+
+	return value, nil
+}
+
+func (ps *ProcessSettings) SafeGet(settingPath ...interface{}) interface{} {
+	var value interface{}
+
+	for _, settingsFile := range *ps.Settings {
+		if ps.TargetEvaluator.IsTargetMatch(settingsFile) {
+			if fileValue := dig(settingsFile.Settings, settingPath...); fileValue != nil {
+				value = fileValue
+			}
+		}
+	}
+
+	return value
+}
+
+func dig(settings interface{}, settingPath ...interface{}) interface{} {
+	settingsType := reflect.TypeOf(settings).Kind()
+
+	if len(settingPath) == 1 {
+		switch settingsType {
+		case reflect.Map:
+			nextKey := settingPath[0].(string)
+			return settings.(map[string]interface{})[nextKey]
+		case reflect.Slice:
+			if reflect.TypeOf(settingPath[0]).Kind() == reflect.Int {
+				return settings.([]interface{})[settingPath[0].(int)]
+			}
+		default:
+			return nil
+		}
+	}
+
+	switch reflect.TypeOf(settings).Kind() {
+	case reflect.Map:
+		nextKey := settingPath[0].(string)
+		return dig(settings.(map[string]interface{})[nextKey], settingPath[1:]...)
+	case reflect.Slice:
+		if reflect.TypeOf(settingPath[0]).Kind() == reflect.Int {
+			return dig(settings.([]interface{})[settingPath[0].(int)], settingPath[1:]...)
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 func loadSettingsFromFile(filePath string) (*[]SettingsFile, error) {
