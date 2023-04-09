@@ -140,6 +140,36 @@ var (
 			},
 		},
 	}
+	complexHoneypotWithSettingsOnlyInTarget = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"certs": []interface{}{
+						map[string]interface{}{
+							"path": "original_0",
+						},
+						map[string]interface{}{
+							"path": "original_1",
+						},
+					},
+				},
+			},
+		},
+		{
+			FileName: "honeypot_override.yml",
+			Target: map[string]interface{}{
+				"app": "telecom",
+			},
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"log_stream": map[string]interface{}{
+						"telecom": "something",
+					},
+				},
+			},
+		},
+	}
 )
 
 var getAndSafeGetTests = []struct {
@@ -219,6 +249,27 @@ var getAndSafeGetTests = []struct {
 		},
 		settingPath:   []interface{}{"honeypot", "certs", 1, "path"},
 		expectedValue: "original_1",
+	},
+	{
+		name: "Returns nil when the nested setting doesn't exist due to targeting",
+		processSettings: ProcessSettings{
+			Settings: complexHoneypotWithSettingsOnlyInTarget,
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream", "telecom"},
+		expectedError: "The setting 'honeypot.log_stream.telecom' was not found",
+	},
+	{
+		name: "Returns the setting value when the nested setting exists due to targeting",
+		processSettings: ProcessSettings{
+			Settings: complexHoneypotWithSettingsOnlyInTarget,
+			TargetEvaluator: TargetEvaluator{
+				targetingContext: map[string]interface{}{
+					"app": "telecom",
+				},
+			},
+		},
+		settingPath:   []interface{}{"honeypot", "log_stream", "telecom"},
+		expectedValue: "something",
 	},
 }
 

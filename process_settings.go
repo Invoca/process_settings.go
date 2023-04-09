@@ -67,6 +67,10 @@ func (ps *ProcessSettings) SafeGet(settingPath ...interface{}) interface{} {
 }
 
 func dig(settings interface{}, settingPath ...interface{}) interface{} {
+	if settings == nil {
+		return nil
+	}
+
 	settingsType := reflect.TypeOf(settings).Kind()
 
 	if len(settingPath) == 1 {
