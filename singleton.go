@@ -29,3 +29,22 @@ func SafeGet(settingPath ...interface{}) interface{} {
 	}
 	return instance.SafeGet(settingPath...)
 }
+
+// WhenUpdated registers a function to be called when the settings are updated on the global ProcessSettings instance.
+// If the global instance has not been set, an error is returned.
+func WhenUpdated(fn func(), initial_update ...bool) (int, error) {
+	if instance == nil {
+		return 0, errors.New("The global process settings have not been set")
+	}
+	return instance.WhenUpdated(fn, initial_update...), nil
+}
+
+// CancelWhenUpdated cancels a function that was registered on the global ProcessSettings instance using WhenUpdated.
+// If the global instance has not been set, an error is returned.
+func CancelWhenUpdated(index int) error {
+	if instance == nil {
+		return errors.New("The global process settings have not been set")
+	}
+	instance.CancelWhenUpdated(index)
+	return nil
+}

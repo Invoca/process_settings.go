@@ -123,6 +123,26 @@ and `process_settings.SafeGet()` (which delegates to `process_settings.instance`
 http_version := process_settings.Get('frontend', 'http_version')
 ```
 
+#### Register a `WhenUpdated` Callback
+Alternatively, if you need to execute initially and whenever the value is updated, register a callback with `process_settings.WhenUpdated()`:
+
+```go
+process_settings.WhenUpdated(func() {
+    logger.level = process_settings.Get("frontend", "log_level")
+})
+```
+
+By default, the `WhenUpdated` func is called initially when registered. We've found this to be convenient in most cases; it can be disabled by passing an optional second
+argument `false`, in which case the block will be called 0 or more times in the future,
+when any of the process settings for this process change.
+
+`WhenUpdated` **_is not_** idempotent, so adding the same func multiple times will result
+in multiple registered callbacks doing the same operation.
+
+In case you need to cancel the callback later, `WhenUpdated` returns a handle (the index of the registered func) which can later be passed into `CancelWhenUpdated`.
+
+Note that all callbacks run sequentially on the shared change monitoring thread, so please be considerate!
+
 ## Targeting
 Each settings YAML file has an optional `target` key at the top level, next to `settings`.
 

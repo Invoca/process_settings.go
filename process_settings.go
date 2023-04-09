@@ -16,10 +16,11 @@ import (
 // A ProcessSettings is a collection of settings files and a target evaluator
 // that can be used to get the value of a settings based on the current targeting.
 type ProcessSettings struct {
-	FilePath        string          // The path to the settings file that was used to create the ProcessSettings
-	Settings        *[]SettingsFile // The settings files that make up the ProcessSettings
-	TargetEvaluator TargetEvaluator // The target evaluator that is used to determine which settings files are applicable
-	Monitor         *fsnotify.Watcher
+	FilePath            string            // The path to the settings file that was used to create the ProcessSettings
+	Settings            *[]SettingsFile   // The settings files that make up the ProcessSettings
+	TargetEvaluator     TargetEvaluator   // The target evaluator that is used to determine which settings files are applicable
+	Monitor             *fsnotify.Watcher // The file monitor that is used to detect changes to the settings file
+	WhenUpdatedRegistry []func()          // A list of functions to call when the settings are updated
 }
 
 // NewProcessSettingsFromFile creates a new instance of ProcessSettings by
@@ -98,6 +99,9 @@ func (ps *ProcessSettings) StartMonitor() {
 						log.Println("Error processing new version of the process settings file:", err)
 					}
 					ps.Settings = settings
+					for _, fn := range ps.WhenUpdatedRegistry {
+						fn()
+					}
 				}
 			case err, ok := <-ps.Monitor.Errors:
 				if !ok {
@@ -107,6 +111,22 @@ func (ps *ProcessSettings) StartMonitor() {
 			}
 		}
 	}()
+}
+
+// WhenUpdated registers a function to be called when the settings are updated and by default calls the function immediately.
+// Optionally false can be passed as the second argument to not call the function immediately.
+// The function returns an index that can be used to cancel the function using CancelWhenUpdated.
+func (ps *ProcessSettings) WhenUpdated(fn func(), initial_update ...bool) int {
+	ps.WhenUpdatedRegistry = append(ps.WhenUpdatedRegistry, fn)
+	if len(initial_update) == 0 || initial_update[0] == true {
+		fn()
+	}
+	return len(ps.WhenUpdatedRegistry) - 1
+}
+
+// CancelWhenUpdated cancels a function that was registered using WhenUpdated.
+func (ps *ProcessSettings) CancelWhenUpdated(index int) {
+	ps.WhenUpdatedRegistry[index] = func() {}
 }
 
 func dig(settings interface{}, settingPath ...interface{}) interface{} {
