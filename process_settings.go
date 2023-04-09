@@ -4,10 +4,12 @@ package process_settings
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strings"
 
+	"github.com/fsnotify/fsnotify"
 	"gopkg.in/yaml.v3"
 )
 
@@ -17,6 +19,7 @@ type ProcessSettings struct {
 	FilePath        string          // The path to the settings file that was used to create the ProcessSettings
 	Settings        *[]SettingsFile // The settings files that make up the ProcessSettings
 	TargetEvaluator TargetEvaluator // The target evaluator that is used to determine which settings files are applicable
+	Monitor         *fsnotify.Watcher
 }
 
 // NewProcessSettingsFromFile creates a new instance of ProcessSettings by
@@ -27,10 +30,22 @@ func NewProcessSettingsFromFile(filePath string, staticContext map[string]interf
 	if err != nil {
 		return nil, err
 	}
+
+	monitor, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+
+	err = monitor.Add(filePath)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ProcessSettings{
 		FilePath:        filePath,
 		Settings:        settings,
 		TargetEvaluator: TargetEvaluator{staticContext},
+		Monitor:         monitor,
 	}, nil
 }
 
@@ -64,6 +79,34 @@ func (ps *ProcessSettings) SafeGet(settingPath ...interface{}) interface{} {
 	}
 
 	return value
+}
+
+// StartMonitor starts a goroutine that monitors the settings file for changes
+func (ps *ProcessSettings) StartMonitor() {
+	go func() {
+		defer ps.Monitor.Close()
+
+		for {
+			select {
+			case event, ok := <-ps.Monitor.Events:
+				if !ok {
+					return
+				}
+				if event.Has(fsnotify.Write) {
+					settings, err := loadSettingsFromFile(ps.FilePath)
+					if err != nil {
+						log.Println("Error processing new version of the process settings file:", err)
+					}
+					ps.Settings = settings
+				}
+			case err, ok := <-ps.Monitor.Errors:
+				if !ok {
+					return
+				}
+				log.Println("Error reported from fsnotify:", err)
+			}
+		}
+	}()
 }
 
 func dig(settings interface{}, settingPath ...interface{}) interface{} {

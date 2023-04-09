@@ -45,12 +45,19 @@ import (
 )
 
 func main() {
-    process_settings.SetGlobalProcessSettings(
-        process_settings.NewProcessSettingsFromFile("/etc/process_settings/combined_process_settings.yml", map[string]instance{}{
+    ps, err := process_settings.NewProcessSettingsFromFile(
+        "/etc/process_settings/combined_process_settings.yml",
+        map[string]instance{}{
             "service_name": "frontend",
             "datacenter": "AWS-US-EAST-1",
-        })
+        }
     )
+
+    if err != nil {
+        panic(err)
+    }
+
+    process_settings.SetGlobalProcessSettings(ps)
 }
 ```
 
@@ -79,6 +86,41 @@ For example:
 
 ```go
 log_level := process_settings.Get("frontend", "log_level")
+```
+
+### Dynamic Settings
+
+The `process_settings.ProcessSettings` object has a `Monitor` built in that loads settings changes dynamically whenever the file changes,
+by using the [fsnotify](https://github.com./fsnotify/fsnotify) library which in turn uses the `INotify` module of the Linux kernel, or `FSEvents` on MacOS. There is no need to restart the process or send it a signal to tell it to reload changes.
+
+To start the monitor goroutine, call the `StartMonitor()` method on the `process_settings.ProcessSettings` object.
+
+```go
+func main() {
+    ps, err := process_settings.NewProcessSettingsFromFile(
+        "/etc/process_settings/combined_process_settings.yml",
+        map[string]instance{}{
+            "service_name": "frontend",
+            "datacenter": "AWS-US-EAST-1",
+        }
+    )
+
+    if err != nil {
+        panic(err)
+    }
+
+    process_settings.SetGlobalProcessSettings(ps)
+    ps.StartMonitor()
+}
+```
+
+#### Read Latest Settings Through `process_settings.Get()` and `process_settings.SafeGet()`
+
+The simplest approach--as shown above--is to read the latest settings at any time through `process_settings.Get()`
+and `process_settings.SafeGet()` (which delegates to `process_settings.instance`):
+
+```
+http_version := process_settings.Get('frontend', 'http_version')
 ```
 
 ## Targeting
