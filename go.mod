@@ -1,4 +1,4 @@
-module github.com/invoca/process_settings.go
+module github.com/Invoca/process_settings.go
 
 go 1.17
 
