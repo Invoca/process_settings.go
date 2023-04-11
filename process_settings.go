@@ -56,11 +56,7 @@ func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) 
 	value := ps.SafeGet(settingPath...)
 
 	if value == nil {
-		stringifiedSettingPath := make([]string, len(settingPath))
-		for i := range settingPath {
-			stringifiedSettingPath[i] = fmt.Sprintf("%v", settingPath[i])
-		}
-		return nil, errors.New(fmt.Sprintf("The setting '%s' was not found", strings.Join(stringifiedSettingPath, ".")))
+		return nil, errors.New(fmt.Sprintf("The setting '%s' was not found", dotDelimitedSettingsPath(settingPath)))
 	}
 
 	return value, nil
@@ -197,4 +193,12 @@ func loadYamlFile(filePath string, target interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func dotDelimitedSettingsPath(settingPath []interface{}) string {
+	stringifiedSettingPath := make([]string, len(settingPath))
+	for i, path := range settingPath {
+		stringifiedSettingPath[i] = fmt.Sprintf("%v", path)
+	}
+	return strings.Join(stringifiedSettingPath, ".")
 }
