@@ -23,6 +23,10 @@ type ProcessSettings struct {
 	WhenUpdatedRegistry []func()          // A list of functions to call when the settings are updated
 }
 
+type SettingNotFound struct {
+	NotFoundKey string
+}
+
 // NewProcessSettingsFromFile creates a new instance of ProcessSettings by
 // loading the settings from a specified file path and using the specified
 // static context to evaluate the targeting.
@@ -53,9 +57,19 @@ func NewProcessSettingsFromFile(filePath string, staticContext map[string]interf
 // Get returns the value of a setting based on the current targeting.
 // If the requested setting is not found, an error is returned.
 func (ps *ProcessSettings) Get(settingPath ...string) (interface{}, error) {
-	value := ps.SafeGet(settingPath...)
+	var value interface{}
 
-	if value == nil {
+	valueFound := false
+	for _, settingsFile := range *ps.Settings {
+		if ps.TargetEvaluator.isTargetMatch(settingsFile) {
+			if fileValue, keyExists := dig(settingsFile.Settings, settingPath...); keyExists {
+				value = fileValue
+				valueFound = true
+			}
+		}
+	}
+
+	if !valueFound {
 		return nil, errors.New(fmt.Sprintf("The setting '%s' was not found", dotDelimitedSettingsPath(settingPath)))
 	}
 
@@ -65,16 +79,7 @@ func (ps *ProcessSettings) Get(settingPath ...string) (interface{}, error) {
 // SafeGet returns the value of a setting based on the current targeting.
 // If the requested setting is not found, nil is returned.
 func (ps *ProcessSettings) SafeGet(settingPath ...string) interface{} {
-	var value interface{}
-
-	for _, settingsFile := range *ps.Settings {
-		if ps.TargetEvaluator.isTargetMatch(settingsFile) {
-			if fileValue := dig(settingsFile.Settings, settingPath...); fileValue != nil {
-				value = fileValue
-			}
-		}
-	}
-
+	value, _ := ps.Get(settingPath...)
 	return value
 }
 
@@ -125,9 +130,9 @@ func (ps *ProcessSettings) CancelWhenUpdated(index int) {
 	ps.WhenUpdatedRegistry[index] = func() {}
 }
 
-func dig(settings interface{}, settingPath ...string) interface{} {
+func dig(settings interface{}, settingPath ...string) (interface{}, bool) {
 	if settings == nil {
-		return nil
+		return nil, false
 	}
 
 	settingsType := reflect.TypeOf(settings).Kind()
@@ -135,9 +140,10 @@ func dig(settings interface{}, settingPath ...string) interface{} {
 	if len(settingPath) == 1 {
 		switch settingsType {
 		case reflect.Map:
-			return settings.(map[string]interface{})[settingPath[0]]
+			value, keyExists := settings.(map[string]interface{})[settingPath[0]]
+			return value, keyExists
 		default:
-			return nil
+			return nil, false
 		}
 	}
 
@@ -145,7 +151,7 @@ func dig(settings interface{}, settingPath ...string) interface{} {
 	case reflect.Map:
 		return dig(settings.(map[string]interface{})[settingPath[0]], settingPath[1:]...)
 	default:
-		return nil
+		return nil, false
 	}
 }
 

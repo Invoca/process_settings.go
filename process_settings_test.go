@@ -87,6 +87,17 @@ var (
 			},
 		},
 	}
+	honeypotWithLogStreamSetToNil = &[]SettingsFile{
+		{
+			FileName: "honeypot.yml",
+			Settings: map[string]interface{}{
+				"honeypot": map[string]interface{}{
+					"answer_odds": 100,
+					"log_stream":  nil,
+				},
+			},
+		},
+	}
 	honeypotWithTarget = &[]SettingsFile{
 		{
 			FileName: "honeypot.yml",
@@ -186,6 +197,14 @@ var getAndSafeGetTests = []struct {
 		},
 		settingPath:   []string{"honeypot", "log_stream"},
 		expectedError: "The setting 'honeypot.log_stream' was not found",
+	},
+	{
+		name: "Returns nil when the value is explicitly set to nil",
+		processSettings: ProcessSettings{
+			Settings: honeypotWithLogStreamSetToNil,
+		},
+		settingPath:   []string{"honeypot", "log_stream"},
+		expectedValue: nil,
 	},
 	{
 		name: "Returns the value when the setting is found",
