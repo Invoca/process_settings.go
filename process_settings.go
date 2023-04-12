@@ -52,7 +52,7 @@ func NewProcessSettingsFromFile(filePath string, staticContext map[string]interf
 
 // Get returns the value of a setting based on the current targeting.
 // If the requested setting is not found, an error is returned.
-func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) {
+func (ps *ProcessSettings) Get(settingPath ...string) (interface{}, error) {
 	value := ps.SafeGet(settingPath...)
 
 	if value == nil {
@@ -64,7 +64,7 @@ func (ps *ProcessSettings) Get(settingPath ...interface{}) (interface{}, error) 
 
 // SafeGet returns the value of a setting based on the current targeting.
 // If the requested setting is not found, nil is returned.
-func (ps *ProcessSettings) SafeGet(settingPath ...interface{}) interface{} {
+func (ps *ProcessSettings) SafeGet(settingPath ...string) interface{} {
 	var value interface{}
 
 	for _, settingsFile := range *ps.Settings {
@@ -125,7 +125,7 @@ func (ps *ProcessSettings) CancelWhenUpdated(index int) {
 	ps.WhenUpdatedRegistry[index] = func() {}
 }
 
-func dig(settings interface{}, settingPath ...interface{}) interface{} {
+func dig(settings interface{}, settingPath ...string) interface{} {
 	if settings == nil {
 		return nil
 	}
@@ -135,12 +135,7 @@ func dig(settings interface{}, settingPath ...interface{}) interface{} {
 	if len(settingPath) == 1 {
 		switch settingsType {
 		case reflect.Map:
-			nextKey := settingPath[0].(string)
-			return settings.(map[string]interface{})[nextKey]
-		case reflect.Slice:
-			if reflect.TypeOf(settingPath[0]).Kind() == reflect.Int {
-				return settings.([]interface{})[settingPath[0].(int)]
-			}
+			return settings.(map[string]interface{})[settingPath[0]]
 		default:
 			return nil
 		}
@@ -148,13 +143,7 @@ func dig(settings interface{}, settingPath ...interface{}) interface{} {
 
 	switch reflect.TypeOf(settings).Kind() {
 	case reflect.Map:
-		nextKey := settingPath[0].(string)
-		return dig(settings.(map[string]interface{})[nextKey], settingPath[1:]...)
-	case reflect.Slice:
-		if reflect.TypeOf(settingPath[0]).Kind() == reflect.Int {
-			return dig(settings.([]interface{})[settingPath[0].(int)], settingPath[1:]...)
-		}
-		return nil
+		return dig(settings.(map[string]interface{})[settingPath[0]], settingPath[1:]...)
 	default:
 		return nil
 	}
@@ -195,7 +184,7 @@ func loadYamlFile(filePath string, target interface{}) error {
 	return nil
 }
 
-func dotDelimitedSettingsPath(settingPath []interface{}) string {
+func dotDelimitedSettingsPath(settingPath []string) string {
 	stringifiedSettingPath := make([]string, len(settingPath))
 	for i, path := range settingPath {
 		stringifiedSettingPath[i] = fmt.Sprintf("%v", path)

@@ -175,7 +175,7 @@ var (
 var getAndSafeGetTests = []struct {
 	name            string
 	processSettings ProcessSettings
-	settingPath     []interface{}
+	settingPath     []string
 	expectedError   string
 	expectedValue   interface{}
 }{
@@ -184,7 +184,7 @@ var getAndSafeGetTests = []struct {
 		processSettings: ProcessSettings{
 			Settings: honeypotWithoutLogStream,
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedError: "The setting 'honeypot.log_stream' was not found",
 	},
 	{
@@ -192,7 +192,7 @@ var getAndSafeGetTests = []struct {
 		processSettings: ProcessSettings{
 			Settings: honeypotWithLogStream,
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedValue: "sip",
 	},
 	{
@@ -200,7 +200,7 @@ var getAndSafeGetTests = []struct {
 		processSettings: ProcessSettings{
 			Settings: honeypotWithTarget,
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedError: "The setting 'honeypot.log_stream' was not found",
 	},
 	{
@@ -213,7 +213,7 @@ var getAndSafeGetTests = []struct {
 				},
 			},
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedValue: "sip",
 	},
 	{
@@ -226,7 +226,7 @@ var getAndSafeGetTests = []struct {
 				},
 			},
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedValue: "original",
 	},
 	{
@@ -239,23 +239,15 @@ var getAndSafeGetTests = []struct {
 				},
 			},
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream"},
+		settingPath:   []string{"honeypot", "log_stream"},
 		expectedValue: "override",
-	},
-	{
-		name: "Returns the values nested under arrays",
-		processSettings: ProcessSettings{
-			Settings: honeypotWithSettingsArray,
-		},
-		settingPath:   []interface{}{"honeypot", "certs", 1, "path"},
-		expectedValue: "original_1",
 	},
 	{
 		name: "Returns nil when the nested setting doesn't exist due to targeting",
 		processSettings: ProcessSettings{
 			Settings: complexHoneypotWithSettingsOnlyInTarget,
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream", "telecom"},
+		settingPath:   []string{"honeypot", "log_stream", "telecom"},
 		expectedError: "The setting 'honeypot.log_stream.telecom' was not found",
 	},
 	{
@@ -268,7 +260,7 @@ var getAndSafeGetTests = []struct {
 				},
 			},
 		},
-		settingPath:   []interface{}{"honeypot", "log_stream", "telecom"},
+		settingPath:   []string{"honeypot", "log_stream", "telecom"},
 		expectedValue: "something",
 	},
 }

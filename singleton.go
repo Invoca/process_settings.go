@@ -13,7 +13,7 @@ func SetGlobalProcessSettings(settings *ProcessSettings) {
 // Get returns the value of a setting based on the current targeting.
 // If the global instance has not been set, or the requested setting is not found,
 // an error is returned.
-func Get(settingPath ...interface{}) (interface{}, error) {
+func Get(settingPath ...string) (interface{}, error) {
 	if instance == nil {
 		return nil, errors.New("The global process settings have not been set")
 	}
@@ -23,7 +23,7 @@ func Get(settingPath ...interface{}) (interface{}, error) {
 // SafeGet returns the value of a setting based on the current targeting.
 // If the global instance has not been set, or the requested setting is not found,
 // nil is returned.
-func SafeGet(settingPath ...interface{}) interface{} {
+func SafeGet(settingPath ...string) interface{} {
 	if instance == nil {
 		return nil
 	}
