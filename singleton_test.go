@@ -16,7 +16,7 @@ func TestProcessSettingsSingleton(t *testing.T) {
 
 	t.Run("SafeGet returns nil with the singleton instance has not been set", func(t *testing.T) {
 		SetGlobalProcessSettings(nil)
-		value := SafeGet("settings", "log_stream", "sip")
+		value, _ := SafeGet("settings", "log_stream", "sip")
 
 		assert.Nil(t, value)
 	})

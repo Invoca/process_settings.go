@@ -24,7 +24,11 @@ type ProcessSettings struct {
 }
 
 type SettingNotFound struct {
-	NotFoundKey string
+	SettingPath []string
+}
+
+func (e *SettingNotFound) Error() string {
+	return fmt.Sprintf("The setting '%s' was not found", dotDelimitedSettingsPath(e.SettingPath))
 }
 
 // NewProcessSettingsFromFile creates a new instance of ProcessSettings by
@@ -70,7 +74,7 @@ func (ps *ProcessSettings) Get(settingPath ...string) (interface{}, error) {
 	}
 
 	if !valueFound {
-		return nil, errors.New(fmt.Sprintf("The setting '%s' was not found", dotDelimitedSettingsPath(settingPath)))
+		return nil, &SettingNotFound{settingPath}
 	}
 
 	return value, nil
@@ -78,9 +82,12 @@ func (ps *ProcessSettings) Get(settingPath ...string) (interface{}, error) {
 
 // SafeGet returns the value of a setting based on the current targeting.
 // If the requested setting is not found, nil is returned.
-func (ps *ProcessSettings) SafeGet(settingPath ...string) interface{} {
-	value, _ := ps.Get(settingPath...)
-	return value
+func (ps *ProcessSettings) SafeGet(settingPath ...string) (interface{}, error) {
+	value, err := ps.Get(settingPath...)
+	if err != nil && errors.Is(err, &SettingNotFound{}) {
+		return nil, err
+	}
+	return value, nil
 }
 
 // StartMonitor starts a goroutine that monitors the settings file for changes

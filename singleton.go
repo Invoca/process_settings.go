@@ -23,9 +23,9 @@ func Get(settingPath ...string) (interface{}, error) {
 // SafeGet returns the value of a setting based on the current targeting.
 // If the global instance has not been set, or the requested setting is not found,
 // nil is returned.
-func SafeGet(settingPath ...string) interface{} {
+func SafeGet(settingPath ...string) (interface{}, error) {
 	if instance == nil {
-		return nil
+		return nil, errors.New("The global process settings have not been set")
 	}
 	return instance.SafeGet(settingPath...)
 }

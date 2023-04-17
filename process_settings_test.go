@@ -287,7 +287,7 @@ var getAndSafeGetTests = []struct {
 func TestProcessSettings_SafeGet(t *testing.T) {
 	for _, test := range getAndSafeGetTests {
 		t.Run(test.name, func(t *testing.T) {
-			value := test.processSettings.SafeGet(test.settingPath...)
+			value, _ := test.processSettings.SafeGet(test.settingPath...)
 			if test.expectedError == "" {
 				assert.Equal(t, test.expectedValue, value)
 			} else {
