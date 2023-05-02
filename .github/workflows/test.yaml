@@ -1,0 +1,20 @@
+name: ProcessSettings
+
+on: [push]
+
+jobs:
+  # Test Linux with the latest Go version and the oldest we support.
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ['1.17', '1.20']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Test
+        run: go test -v ./...
